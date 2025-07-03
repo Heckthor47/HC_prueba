@@ -1,0 +1,344 @@
+/* ¿Cuándo usar style.css global?
+- Si el estilo es muy general y afecta a todo el sitio (colores, fuentes, layout principal).
+- Si el componente es muy simple y no planeas reutilizarlo fuera de este proyecto.
+*/
+
+
+
+/* =========================
+  VARIABLES
+  ========================= */
+:root {
+  --Primary-Color-GOB-MX: #611232;
+  --Secundarios-Dorado-500: #A57F2C;
+  --Neutro-Neutro-500: #AAAAAA;
+  --Neutro-Neutro-600: #767676;
+  --Text-Text-primary-enabled: #611232;
+  --dropdown-arrow-svg: url('data:image/svg+xml;utf8,<svg fill="var(--Text-Text-primary-enabled)" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  --box-shadow-default: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* =========================
+  LAYOUT PRINCIPAL
+  ========================= */
+
+body > .page {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+body.mapa-page {
+  margin: 0;
+  padding: 0;
+  padding-top: 100px;
+  padding-bottom: 32px;
+}
+
+body.mapa-page .barra-logo {
+  position: fixed;
+  z-index: 9999;
+}
+
+html, body, .page {
+  height: 100%;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 24px;
+  min-height: 0;
+  padding-left: 32px;
+  padding-right: 32px;
+  box-sizing: border-box;
+  padding-bottom: 32px; /
+}
+
+.sidebar {
+  width: 320px;
+  min-width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mapa-main {
+  flex: 1 1 auto;
+  display: flex;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
+  background: none !important;
+  flex: 1 1 auto;
+}
+
+/* =========================
+  TARJETAS Y LEYENDAS
+  ========================= */
+.card-capas,
+.leyenda {
+  background: #fff;
+  padding: 16px;
+  border-radius: 16px;
+  box-sizing: border-box;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.card-capas {
+  max-height: 200px; 
+  min-height: 200;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.leyenda-header {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 16px 16px 12px 16px;
+  z-index: 2;
+  border-bottom: 1px solid #eee;
+  box-shadow: 0 4px 6px -6px rgba(0,0,0,0.1);
+  margin: 0;
+}
+
+.leyenda-contenido {
+  padding: 12px 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.card-capas h2,
+.card-capas .leyenda-header h4,
+.leyenda h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #161A1D;
+  margin: 0;
+  padding: 0;
+}
+
+.leyenda-item {
+  display: flex;
+  max-height: 250px; 
+  min-height: 200;
+  align-items: center;
+  line-height: 1.4;
+  padding: 6px 0;
+}
+
+.leyenda-item img {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.color-circulo {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-right: 10px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* =========================
+  SWITCHES
+  ========================= */
+.switch {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.switch input {
+  display: none;
+}
+
+.switch input:disabled + .slider {
+  background-color: #cccccc;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.slider {
+  width: 40px;
+  height: 24px;
+  background-color: #DDDDDD;
+  border-radius: 100px;
+  position: relative;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 2px;
+  left: 2px;
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+}
+
+.switch input:checked + .slider {
+  background-color: #F3F3F3;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(16px);
+}
+
+/* =========================
+  BOTONES DE CONTROL DEL MAPA
+  ========================= */
+.map-control-button {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  position: absolute;
+  z-index: 1000;
+}
+
+.map-control-button:hover {
+  transform: scale(1.1);
+}
+
+.map-control-button:active {
+  transform: scale(0.95) translateY(1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.map-control-button svg, 
+.map-control-button img {
+  width: 24px;
+  height: 24px;
+  color: #161A1D;
+}
+
+#reset-button {
+  position: absolute;
+  right: 40px;
+  bottom: 40px;
+  z-index: 2;
+}
+
+/* =========================
+  GEOCODER
+  ========================= */
+.geocoder-float-container {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  z-index: 10;
+  flex-direction: row-reverse;
+}
+
+.geocoder-panel {
+  width: 225x;
+  margin-left: 8px;
+  z-index: 10;
+}
+
+.geocoder-panel .maplibregl-geocoder {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+geocoder-integrado .map-control-button {
+  position: static !important;
+  z-index: 40;
+  background: #fff;
+}
+
+
+/* --- Estilo para el marcador de ubicación --- */
+.maplibregl-marker svg {
+  display: none;
+}
+
+.maplibregl-marker::before {
+  content: '';
+  display: block;
+  background-image: url('imagenes/ubi.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  width: 32px;
+  height: 48px;
+  transform: translate(-50%, -100%) rotateX(20deg) rotateY(5deg);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+
+/* DROPDOWNS */
+.dropdown-filtros-ubicacion {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 30px;
+  max-height: 320px;      
+  overflow-y: auto;     
+}
+
+
+.dropdown-filtros-ubicacion select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.dropdown-filtros-ubicacion label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.grupo-estado {
+  margin-bottom: 20px; 
+}

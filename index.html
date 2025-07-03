@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Tablero de Homicidios en la Ciudad de México">
+  <title>Homicidios: Zonas de Riesgo</title>
+  <!-- CSS Base -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat&family=Noto+Sans&display=swap" rel="stylesheet">
+  <!-- Maplibre GL CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" />
+  <!-- Maplibre Geocoder CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.css" />
+  <!-- estilos personalizados-->
+  <link rel="stylesheet" href="estilos/general.css" />
+  <link rel="stylesheet" href="estilos/mapa.css" />
+  <link rel="icon" href="imagenes/logo_2025.png" type="image/png">
+</head>
+<body class="mapa-page">
+
+  
+  <div class="page">
+    <header-gob></header-gob>
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+      <aside class="sidebar">
+
+        <!-- Selector de estado -->
+       <div class="filtros-wrapper">
+          <dropdown-filtros-ubicacion></dropdown-filtros-ubicacion>
+       </div>
+       <card-capas></card-capas>
+        <!-- Simbología -->
+        <div class="leyenda card">
+          <div class="leyenda-header">
+            <h4>Simbología</h4>
+          </div>
+          <div class="leyenda-contenido">
+            <div class="leyenda-item">
+              <img src="imagenes/school1.png" alt="Escuela" /> <span>Escuelas</span>
+            </div>
+            <div class="leyenda-item">
+              <img src="imagenes/tree-fill.png" alt="Parques" /> <span>Parques</span>
+            </div>
+            <div class="leyenda-item">
+              <span class="color-circulo" style="background-color: #F9EFA5;"></span> <span>Homicidios registrados</span>
+            </div>
+            <div class="leyenda-item">
+              <span class="color-circulo" style="background-color: #F5011E;"></span> <span>Zona de riesgo alto</span>
+            </div>
+            <div class="leyenda-item">
+              <span class="color-circulo" style="background-color: #F58F7A;"></span> <span>Zona de riesgo medio</span>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Mapa -->
+      <div class="mapa-main">
+        <geocoder-integrado></geocoder-integrado>
+        <div id="map"></div>
+        <!-- Botón de reset -->
+        <boton-reset-mapa></boton-reset-mapa>
+      </div>
+    </div>
+  <footer-gob></footer-gob>
+
+  <!-- Librerías externas -->
+  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.min.js"></script>
+
+  <!-- Archivos propios -->
+  <!-- 1. Componentes básicos -->
+  <script src="scripts/filtro.js" defer></script> <!-- Define <dropdown-filtros-ubicacion> -->
+  <script src="scripts/restablecer.js" defer></script> <!-- Define <boton-reset-mapa> -->
+  <script src="scripts/header.js" defer></script> <!-- Define <header-gob> -->
+  <script src="scripts/footer.js" defer></script> <!-- Define <footer-gob> -->
+  <script src="scripts/card-capas.js" defer></script> <!-- Define <card-capas> -->
+
+  <!-- 2. Configuración del mapa -->
+  <script src="scripts/mapa_config.js" defer></script> <!-- Configura el mapa y sus capas -->
+
+  <!-- 3. Eventos y lógica específica -->
+  <script src="scripts/eventos_selector.js" defer></script> <!-- Maneja eventos de selección -->
+  <script src="scripts/main.js"></script> <!-- Lógica principal -->
+
+  <!-- 4. Otros scripts -->
+  <script src="scripts/geocoder.js" defer></script> <!-- Configura el geocodificador -->
+  <script src="scripts/capas.js" defer></script>
+</body>
+</html>
