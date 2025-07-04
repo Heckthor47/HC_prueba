@@ -231,11 +231,13 @@ document.addEventListener('estado-change', (e) => {
 });
 
 // Escuchar el evento de cambio de municipio
+// La lógica de filtros municipales se maneja en eventos_selector.js
+// para evitar conflictos
 document.addEventListener('municipio-change', (e) => {
   const cvegeo = e.detail.value;
   if (cvegeo) {
     moverMapaAMunicipio(cvegeo);
-    activarVistaLocal(cvegeo, 'municipio');
+    // activarVistaLocal se maneja en eventos_selector.js
   }
 });
 

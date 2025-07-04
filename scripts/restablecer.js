@@ -21,7 +21,9 @@ resetMapView(button) {
   const cardCapas = document.querySelector('card-capas');
 
   if (cardCapas) {
-    cardCapas.sincronizarCheckboxes();
+    // Deshabilitar todos los controles de capas en vista nacional
+    cardCapas.toggleLayerControls(false);
+    console.log("Controles de capas deshabilitados en vista nacional");
   } else {
     console.warn("El elemento <card-capas> no está presente en el DOM.");
   }
@@ -49,25 +51,25 @@ resetMapView(button) {
   const gWrapper = document.getElementById('geocoder-wrapper');
   if (gWrapper) gWrapper.style.display = 'none';
 
-  /* 2. Remover polígonos de estado y municipio --------------------------- */
-  if (map.getLayer('estado-fill'))     map.removeLayer('estado-fill');
-  if (map.getLayer('estado-outline'))  map.removeLayer('estado-outline');
-  if (map.getSource('estado-source'))  map.removeSource('estado-source');
+  /* 2. Remover polígonos de estado y ocultar municipios ------------------- */
+  if (window.map.getLayer('estado-fill'))     window.map.removeLayer('estado-fill');
+  if (window.map.getLayer('estado-outline'))  window.map.removeLayer('estado-outline');
+  if (window.map.getSource('estado-source'))  window.map.removeSource('estado-source');
 
-  if (map.getLayer('municipio-fill'))    map.removeLayer('municipio-fill');
-  if (map.getLayer('municipio-outline')) map.removeLayer('municipio-outline');
-  if (map.getSource('municipio-source')) map.removeSource('municipio-source');
+  // Para municipios: solo OCULTAR, NO eliminar (para que se puedan usar después)
+  if (window.map.getLayer('municipio-fill'))    window.map.setLayoutProperty('municipio-fill', 'visibility', 'none');
+  if (window.map.getLayer('municipio-outline')) window.map.setLayoutProperty('municipio-outline', 'visibility', 'none');
 
   /* 3. Ocultar capas temáticas y limpiar filtros ------------------------- */
   ['homicidios-layer','parques-layer','escuelas-layer','calles-layer'].forEach(id=>{
-    if (map.getLayer(id)) {
-      map.setFilter(id, ['==','CVE_ENT','']);
-      map.setLayoutProperty(id,'visibility','none');
+    if (window.map.getLayer(id)) {
+      window.map.setFilter(id, ['==','CVE_ENT','']);
+      window.map.setLayoutProperty(id,'visibility','none');
     }
   });
 
   /* 4. Vaciar la fuente de calles (no se elimina) ------------------------ */
-  const srcCalles = map.getSource('calles');
+  const srcCalles = window.map.getSource('calles');
   if (srcCalles) srcCalles.setData({ type:'FeatureCollection', features: [] });
 
   /* 5. Reiniciar dropdowns de filtros ------------------------------------ */
@@ -78,9 +80,14 @@ resetMapView(button) {
   if (selMpio)   { selMpio.value=''; selMpio.disabled=true; }
 
   /* 6. Volver a vista nacional ------------------------------------------ */
-  map.flyTo({ center:[-102.5528,23.6345], zoom:4.2, speed:1.2 });
+  window.map.flyTo({ center:[-102.5528,23.6345], zoom:4.2, speed:1.2 });
 
-  /* 7. Efecto visual del botón ------------------------------------------ */
+  /* 7. Deshabilitar controles de capas en vista nacional --------------- */
+  if (cardCapas && typeof cardCapas.toggleLayerControls === 'function') {
+    cardCapas.toggleLayerControls(false); // Deshabilitar todos los controles
+  }
+
+  /* 8. Efecto visual del botón ------------------------------------------ */
     button.style.transform = 'scale(0.95) translateY(1px)';
     button.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
 

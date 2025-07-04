@@ -70,6 +70,13 @@ function configurarSelectorEstado() {
     // Aplicar filtros y visibilidad de capas
     aplicarFiltrosEstado(codigoEntidad);
 
+    // Habilitar controles de capas al seleccionar estado
+    const cardCapas = document.querySelector('card-capas');
+    if (cardCapas) {
+      cardCapas.toggleLayerControls(true, true); // Habilitar controles y auto-activar calles
+      console.log("Controles de capas habilitados para vista estatal");
+    }
+
     // Recargar datos de calles
     recargarCalles(seleccion);
   });
@@ -112,6 +119,9 @@ function configurarSelectorEstado() {
         window.map.setLayoutProperty("municipio-outline", "visibility", "visible");
       }
 
+      // Aplicar filtros estatales al volver del municipio
+      aplicarFiltrosEstado(codigoEntidad);
+
       return;
     }
 
@@ -127,8 +137,15 @@ function configurarSelectorEstado() {
     const bboxMunicipio = turf.bbox(feature);
     window.map.fitBounds(bboxMunicipio, { padding: 20, duration: 1000 });
 
-    // Aplicar filtros por municipio (esto es lo que hace que funcionen las capas)
+    // Aplicar filtros por municipio para que las capas se muestren correctamente
     aplicarFiltrosMunicipio(cvegeo);
+
+    // Habilitar controles de capas al seleccionar municipio
+    const cardCapas = document.querySelector('card-capas');
+    if (cardCapas) {
+      cardCapas.toggleLayerControls(true, true); // Habilitar controles y auto-activar calles
+      console.log("Controles de capas habilitados para vista municipal");
+    }
   });
 }
 
@@ -152,6 +169,13 @@ function limpiarEstado() {
   }
   if (window.map.getLayer("municipio-outline")) {
     window.map.setLayoutProperty("municipio-outline", "visibility", "none");
+  }
+
+  // Deshabilitar controles de capas en vista nacional
+  const cardCapas = document.querySelector('card-capas');
+  if (cardCapas) {
+    cardCapas.toggleLayerControls(false);
+    console.log("Controles de capas deshabilitados en vista nacional");
   }
 
   if (window.bboxNacional) window.map.fitBounds(window.bboxNacional, { padding: 20, duration: 1000 });
@@ -215,33 +239,47 @@ function aplicarFiltrosEstado(codigoEntidad) {
   }
 }
 
-// Aplicar filtros por municipio (CLAVE para que funcionen las capas a nivel municipal)
+// Aplicar filtros por municipio (mantener capas estatales visibles)
 function aplicarFiltrosMunicipio(cvegeo) {
+  console.log(`Vista municipal - manteniendo capas estatales para CVEGEO: ${cvegeo}`);
+  
+  // Extraer código de estado del CVEGEO
+  const cveEnt = cvegeo.substring(0, 2);  // Primeros 2 dígitos
+  
+  console.log(`Manteniendo filtros estatales para CVE_ENT: ${cveEnt}`);
+
   const layerToggleMapping = {
     "homicidios-layer": "toggle-homicidios",
     "parques-layer": "toggle-parques",
     "escuelas-layer": "toggle-escuelas"
   };
 
+  // Para vista municipal: mantener filtros estatales, NO aplicar filtros municipales
   Object.entries(layerToggleMapping).forEach(([layerId, toggleId]) => {
     const toggle = document.getElementById(toggleId);
 
-    const aplicarFiltro = () => {
-      window.map.setFilter(layerId, ["==", "CVEGEO", cvegeo]);
+    if (window.map.getLayer(layerId)) {
+      // Mantener filtro estatal (no cambiar el filtro existente)
+      window.map.setFilter(layerId, ["==", "CVE_ENT", cveEnt]);
+      
+      // Aplicar visibilidad según el checkbox
       const visible = toggle?.checked ? "visible" : "none";
       window.map.setLayoutProperty(layerId, "visibility", visible);
-      console.log(`Capa ${layerId} → visibilidad: ${visible}`);
-    };
-
-    if (window.map.getLayer(layerId)) {
-      aplicarFiltro();
-    } else {
-      // Espera a que la capa esté disponible antes de aplicar
-      window.map.once('idle', () => {
-        if (window.map.getLayer(layerId)) aplicarFiltro();
-      });
+      
+      console.log(`Capa ${layerId} → filtro estatal mantenido: CVE_ENT=${cveEnt}, visibilidad: ${visible}`);
     }
   });
+
+  // Para calles: mantener filtro estatal también
+  if (window.map.getLayer("calles-layer")) {
+    window.map.setFilter("calles-layer", ["==", "CVE_ENT", cveEnt]);
+    const toggleCalles = document.getElementById("toggle-calles");
+    if (toggleCalles) {
+      const visible = toggleCalles.checked ? "visible" : "none";
+      window.map.setLayoutProperty("calles-layer", "visibility", visible);
+      console.log(`Capa calles-layer → filtro estatal mantenido: CVE_ENT=${cveEnt}, visibilidad: ${visible}`);
+    }
+  }
 }
 
 // Recargar datos de calles
@@ -301,7 +339,6 @@ window.map.on("mouseleave", "municipio-fill", () => {
   popupMunicipio.remove();
 });
 
-// Eventos modernos de tabata-local para compatibilidad
 document.addEventListener('estado-change', (e) => {
   const codigoEntidad = e.detail.value;
 
@@ -322,22 +359,6 @@ document.addEventListener('estado-change', (e) => {
   if (typeof cargarCallesPorEstado === 'function') {
     cargarCallesPorEstado(codigo);
   }
-});
-
-document.addEventListener("municipio-change", (e) => {
-  const cvegeo = e.detail.value;
-
-  if (!cvegeo) return;
-
-  // Buscar el municipio
-  const feature = municipiosGeoJson.features.find(f => f.properties.CVEGEO === cvegeo);
-  if (!feature) { 
-    console.warn("Municipio no encontrado"); 
-    return; 
-  }
-
-  // Aplicar filtros por municipio (esto es lo importante para que funcionen las capas)
-  aplicarFiltrosMunicipio(cvegeo);
 });
 
 // Hacer la función disponible globalmente

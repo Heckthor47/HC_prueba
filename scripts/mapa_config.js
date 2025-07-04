@@ -31,8 +31,6 @@ window.currentPopup = null;
 // =========================
 // INICIALIZACIÓN AL CARGAR DOM
 // =========================
-// Añadir declaración global para TypeScript para evitar errores de propiedad 'map' en window
-// Si usas un archivo .d.ts, pon esto ahí; si no, puedes ponerlo aquí arriba.
 if (typeof window !== "undefined") {
   // @ts-ignore
   window.map = window.map;
@@ -59,9 +57,43 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch("https://fabulous-dodol-d03b96.netlify.app/municip_poblacion.geojson")
           .then(r => r.json())
           .then(data => {
-            municipiosGeoJson = data
+            municipiosGeoJson = data;
             bboxNacional = turf.bbox(municipiosGeoJson);
             console.log("Datos de municipios cargados:", municipiosGeoJson);
+            
+            // Agregar la fuente de municipios al mapa
+            window.map.addSource("municipios-source", {
+              type: "geojson",
+              data: municipiosGeoJson
+            });
+
+            // Agregar capas relacionadas con municipios
+            window.map.addLayer({
+              id: "municipio-fill",
+              type: "fill",
+              source: "municipios-source",
+              paint: {
+                "fill-color": "#FA0",
+                "fill-opacity": 0.0  
+              },
+              layout: {
+                visibility: "none"
+              }
+            });
+
+            window.map.addLayer({
+              id: "municipio-outline",
+              type: "line", 
+              source: "municipios-source",
+              paint: {
+                "line-color": "#B9BBC4",
+                "line-width": 2
+              },
+              layout: {
+                visibility: "none"
+              }
+            });
+            
             // Disparar evento personalizado
             document.dispatchEvent(new Event("municipios-cargados"));
             console.log("Datos cargados correctamente.");

@@ -48,18 +48,6 @@ class CardCapas extends HTMLElement {
         }
       });
     });
-
-    document.addEventListener('municipio-change', (e) => {
-      const cvegeo = e.detail.value; // Código del municipio desde el evento
-      const capas = ["homicidios-layer", "parques-layer", "escuelas-layer", "calles-layer"];
-
-      if (cvegeo) {
-        aplicarFiltros(capas, cvegeo, "CVEGEO");
-        console.log(`Filtros aplicados para el municipio con código: ${cvegeo}`);
-      } else {
-        console.warn("No se pudo obtener el código `cvegeo` del municipio seleccionado.");
-      }
-    });
   }
 
   // Sincronizar el estado de los checkboxes con las capas del mapa
