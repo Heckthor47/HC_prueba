@@ -1,3 +1,5 @@
+import { aplicarFiltros } from './capas.js';
+
 class BotonResetMapa extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
@@ -14,58 +16,71 @@ class BotonResetMapa extends HTMLElement {
     });
   }
 
-  resetMapView(button) {
-    // 1. Eliminar marcador si existe
-    if (window.marker) {
-      window.marker.remove();
-      window.marker = null;
+resetMapView(button) {
+  // Obtener el elemento <card-capas>
+  const cardCapas = document.querySelector('card-capas');
+
+  if (cardCapas) {
+    cardCapas.sincronizarCheckboxes();
+  } else {
+    console.warn("El elemento <card-capas> no está presente en el DOM.");
+  }
+
+  /* 1. Limpiar marcador y GEOCODER -------------------------------------- */
+  if (window.marker) {                      // Quitar marcador del mapa
+    window.marker.remove();
+    window.marker = null;
+  }
+
+  // ----- Geocoder -----
+  if (window.geocoder?.clear) {             // Vaciar el texto del input
+    window.geocoder.clear();                // (método propio de MapLibre-Geocoder)
+  }
+
+    // Limpiar el texto del input del geocoder manualmente
+  const geocoderInput = document.querySelector('.mapboxgl-ctrl-geocoder--input.maplibregl-ctrl-geocoder--input');
+  if (geocoderInput) {
+    geocoderInput.value = ''; // Limpiar el texto
+  } else {
+    console.warn("No se encontró el input del geocoder.");
+  }
+  
+  // Cerrar panel flotante (si usas el envoltorio con id="geocoder-wrapper")
+  const gWrapper = document.getElementById('geocoder-wrapper');
+  if (gWrapper) gWrapper.style.display = 'none';
+
+  /* 2. Remover polígonos de estado y municipio --------------------------- */
+  if (map.getLayer('estado-fill'))     map.removeLayer('estado-fill');
+  if (map.getLayer('estado-outline'))  map.removeLayer('estado-outline');
+  if (map.getSource('estado-source'))  map.removeSource('estado-source');
+
+  if (map.getLayer('municipio-fill'))    map.removeLayer('municipio-fill');
+  if (map.getLayer('municipio-outline')) map.removeLayer('municipio-outline');
+  if (map.getSource('municipio-source')) map.removeSource('municipio-source');
+
+  /* 3. Ocultar capas temáticas y limpiar filtros ------------------------- */
+  ['homicidios-layer','parques-layer','escuelas-layer','calles-layer'].forEach(id=>{
+    if (map.getLayer(id)) {
+      map.setFilter(id, ['==','CVE_ENT','']);
+      map.setLayoutProperty(id,'visibility','none');
     }
+  });
 
-    // 2. Limpiar geocoder si existe
-    if (window.geocoder && typeof window.geocoder.clear === 'function') {
-      window.geocoder.clear();
-    }
+  /* 4. Vaciar la fuente de calles (no se elimina) ------------------------ */
+  const srcCalles = map.getSource('calles');
+  if (srcCalles) srcCalles.setData({ type:'FeatureCollection', features: [] });
 
-    // Quitar capas y fuente del municipio y estado
-    if (map.getLayer("municipio-fill")) map.removeLayer("municipio-fill");
-    if (map.getLayer("municipio-outline")) map.removeLayer("municipio-outline");
-    if (map.getSource("municipios-source")) map.removeSource("municipios-source");
+  /* 5. Reiniciar dropdowns de filtros ------------------------------------ */
+  const filtro    = document.querySelector('dropdown-filtros-ubicacion');
+  const selEstado = filtro?.querySelector('#select-estado');
+  const selMpio   = filtro?.querySelector('#select-municipio');
+  if (selEstado) { selEstado.value=''; selEstado.dispatchEvent(new Event('change')); }
+  if (selMpio)   { selMpio.value=''; selMpio.disabled=true; }
 
-    if (map.getLayer("estado-fill")) map.removeLayer("estado-fill");
-    if (map.getLayer("estado-outline")) map.removeLayer("estado-outline");
-    if (map.getSource("estado-source")) map.removeSource("estado-source");
+  /* 6. Volver a vista nacional ------------------------------------------ */
+  map.flyTo({ center:[-102.5528,23.6345], zoom:4.2, speed:1.2 });
 
-    // 3. Volver a vista nacional
-    window.map.flyTo({
-      center: [-102.5528, 23.6345],
-      zoom: 4.2,
-      speed: 1.2,
-      essential: true
-    });
-
-    // 4. Nivel nacional
-    if (typeof window.seleccionarNivel === 'function') {
-      window.seleccionarNivel('nacional');
-    }
-
-    // 5. Resetear filtros
-    const filtro = document.querySelector('dropdown-filtros-ubicacion');
-    const estado = filtro?.querySelector('#select-estado');
-    const municipio = filtro?.querySelector('#select-municipio');
-    if (estado) {
-      estado.value = ''; // Reinicia el valor del selector
-      estado.dispatchEvent(new Event('change')); // Dispara el evento 'change' para reflejar el cambio
-    }
-    if (municipio) {
-      municipio.value = '';
-      municipio.disabled = true;
-    }
-
-    // 6. Ocultar geocoder
-    const geocoderPanel = document.getElementById('geocoder-wrapper');
-    if (geocoderPanel) geocoderPanel.style.display = 'none';
-
-    // 7. Efecto visual de clic
+  /* 7. Efecto visual del botón ------------------------------------------ */
     button.style.transform = 'scale(0.95) translateY(1px)';
     button.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
 
@@ -73,26 +88,11 @@ class BotonResetMapa extends HTMLElement {
       button.style.transform = 'scale(1)';
       button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
     }, 200);
-
-    // 8. Ocultar y limpiar filtros de capas temáticas
-    const capas = [
-      { id: "homicidios-layer", filtro: ["==", "CVE_ENT", ""] },
-      { id: "parques-layer", filtro: ["==", "CVE_ENT", ""] },
-      { id: "escuelas-layer", filtro: ["==", "CVE_ENT", ""] },
-      { id: "calles-layer", filtro: ["==", "CVE_ENT", ""] }
-    ];
-
-    capas.forEach(({ id, filtro }) => {
-      if (map.getLayer(id)) {
-        map.setFilter(id, filtro);
-        map.setLayoutProperty(id, "visibility", "none");
-      }
-
-      // También desmarcar checkbox si existen
-      const checkbox = document.getElementById(`toggle-${id.replace("-layer", "")}`);
-      if (checkbox) checkbox.checked = false;
-    });
-  }
 }
-
+}
 customElements.define('boton-reset-mapa', BotonResetMapa);
+
+
+
+
+

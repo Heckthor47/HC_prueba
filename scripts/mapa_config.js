@@ -1,9 +1,22 @@
+import { aplicarFiltros } from './capas.js';
+
 // =========================
 // VARIABLES GLOBALES
 // =========================
 let marker = null;
-let geojsonMunicipios = null;
-let estadosGeoJson = null;
+export let municipiosGeoJson = null;
+export let estadosGeoJson = null;
+export const cargarCallesPorEstado = (codigoEntidad) => {
+  const source = window.map.getSource("calles");
+  if (!source) {
+    console.error("La fuente 'calles' no está disponible en el mapa.");
+    return;
+  }
+
+  const rutaCalles = `https://fabulous-dodol-d03b96.netlify.app/calles${codigoEntidad}.geojson`;
+  source.setData(rutaCalles);
+  console.log(`Calles cargadas para el estado ${codigoEntidad}: ${rutaCalles}`);
+};
 let bboxNacional = null;
 
 window.map = new maplibregl.Map({
@@ -18,18 +31,63 @@ window.currentPopup = null;
 // =========================
 // INICIALIZACIÓN AL CARGAR DOM
 // =========================
+// Añadir declaración global para TypeScript para evitar errores de propiedad 'map' en window
+// Si usas un archivo .d.ts, pon esto ahí; si no, puedes ponerlo aquí arriba.
+if (typeof window !== "undefined") {
+  // @ts-ignore
+  window.map = window.map;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const esperarMapa = setInterval(() => {
     if (window.map && typeof window.map.on === 'function' && window.map.isStyleLoaded()) {
       clearInterval(esperarMapa);
-      initializeLayerControls();
-      const resetBtn = document.querySelector('boton-reset-mapa');
-      if (resetBtn) {
-        const resetButton = resetBtn.querySelector('#reset-button');
-        resetButton.addEventListener('click', () => {
-          resetBtn.resetMapView(resetButton);
-        });
-      }
+
+      // Inicializar capas y fuentes aquí
+      console.log("El mapa está listo para modificar capas y fuentes.");
+
+      Promise.all([
+        fetch("https://fabulous-dodol-d03b96.netlify.app/entidades.geojson")
+          .then(r => r.json())
+          .then(data => {
+            estadosGeoJson = data;
+            bboxNacional = turf.bbox(estadosGeoJson);
+            console.log("Datos de entidades cargados:", estadosGeoJson);
+          })
+          .catch(err => console.error("Error al cargar entidades:", err)),
+
+        fetch("https://fabulous-dodol-d03b96.netlify.app/municip_poblacion.geojson")
+          .then(r => r.json())
+          .then(data => {
+            municipiosGeoJson = data
+            bboxNacional = turf.bbox(municipiosGeoJson);
+            console.log("Datos de municipios cargados:", municipiosGeoJson);
+            // Disparar evento personalizado
+            document.dispatchEvent(new Event("municipios-cargados"));
+            console.log("Datos cargados correctamente.");
+          })
+          .catch(err => console.error("Error al cargar municipios:", err))
+      ]).then(() => {
+        // Configurar eventos de capas
+        const cardCapas = document.querySelector('card-capas');
+        if (cardCapas) {
+          cardCapas.addEventListener('layer-toggle', (e) => {
+            const { layer, checked } = e.detail;
+            if (window.map.getLayer(layer)) {
+              window.map.setLayoutProperty(layer, 'visibility', checked ? 'visible' : 'none');
+            }
+          });
+        }
+
+        // Configurar botón de reset
+        const resetBtn = document.querySelector('boton-reset-mapa');
+        if (resetBtn) {
+          const resetButton = resetBtn.querySelector('#reset-button');
+          resetButton.addEventListener('click', () => {
+            resetBtn.resetMapView(resetButton);
+          });
+        }
+      });
     }
   }, 100);
 });
@@ -37,171 +95,14 @@ document.addEventListener('DOMContentLoaded', function () {
 // =========================
 // CONFIGURACIÓN DEL MAPA Y CAPAS
 // =========================
-map.on("load", () => {
-  // 1) Carga de entidades GeoJSON
-  fetch("https://fabulous-dodol-d03b96.netlify.app/entidades.geojson")
-    .then(r => r.json())
-    .then(data => {
-      estadosGeoJson = data;
-      bboxNacional = turf.bbox(estadosGeoJson);
-      configurarSelectorEstado();
-    })
-    .catch(err => console.error("Error al cargar entidades:", err));
-
-  // 2) Capas de homicidios
-  map.addSource("homicidios", {
-    type: "geojson",
-    data: "https://fabulous-dodol-d03b96.netlify.app/homicidios.geojson"
-  });
-  map.addLayer({
-    id: "homicidios-layer",
-    type: "circle",
-    source: "homicidios",
-    paint: {
-      "circle-radius": 3,
-      "circle-color": "#F9EFA5",
-      "circle-opacity": 0.8,
-      "circle-stroke-color": "black",
-      "circle-stroke-width": 1
-    },
-    filter: ["==", "CVE_ENT", ""]
-  });
-  map.setLayoutProperty("homicidios-layer", "visibility", "none");
-
-  // 3) Capas de parques
-  map.addSource("parques", {
-    type: "geojson",
-    data: "https://fabulous-dodol-d03b96.netlify.app/parques.geojson"
-  });
-
-  map.loadImage('imagenes/tree-fill.png', (error, image) => {
-    if (error) return console.error("Error al cargar imagen de parques", error);
-    if (!map.hasImage('icono-parque')) map.addImage('icono-parque', image);
-    map.addLayer({
-      id: 'parques-layer',
-      type: 'symbol',
-      source: 'parques',
-      layout: { 'icon-image': 'icono-parque', 'icon-size': 0.1 },
-      filter: ['==', 'CVE_ENT', '']
-    });
-    map.setLayoutProperty('parques-layer', 'visibility', 'none');
-    const toggleParques = document.getElementById('toggle-parques');
-    if (toggleParques) toggleParques.checked = false;
-  });
-
-  // 4) Capas de escuelas
-  map.addSource("escuelas", {
-    type: "geojson",
-    data: "https://fabulous-dodol-d03b96.netlify.app/escuelas.geojson"
-  });
-
-  map.loadImage('imagenes/school1.png', (error, image) => {
-    if (error) return console.error("Error al cargar imagen de escuelas", error);
-    if (!map.hasImage('icono-escuela')) map.addImage('icono-escuela', image);
-    map.addLayer({
-      id: 'escuelas-layer',
-      type: 'symbol',
-      source: 'escuelas',
-      layout: {
-        'icon-image': 'icono-escuela',
-        'icon-size': 0.1,
-        'icon-allow-overlap': true
-      },
-      filter: ['==', 'CVE_ENT', '']
-    });
-    map.setLayoutProperty('escuelas-layer', 'visibility', 'none');
-    const toggleEscuelas = document.getElementById('toggle-escuelas');
-    if (toggleEscuelas) toggleEscuelas.checked = false;
-  });
-
-  // 5) Municipios
-  fetch("https://fabulous-dodol-d03b96.netlify.app/municip_poblacion.geojson")
-    .then(r => r.json())
-    .then(data => {
-      geojsonMunicipios = data;
-
-      // Agregar la fuente de municipios al mapa
-      map.addSource("municipios-source", {
-        type: "geojson",
-        data: geojsonMunicipios
-      });
-
-      // Agregar capas relacionadas con municipios
-      map.addLayer({
-        id: "municipio-fill",
-        type: "fill",
-        source: "municipios-source",
-        paint: {
-          "fill-color": "#FA0",
-          "fill-opacity": 0.0
-        },
-        layout: {
-          visibility: "none"
-        }
-      });
-
-      map.addLayer({
-        id: "municipio-outline",
-        type: "line",
-        source: "municipios-source",
-        paint: {
-          "line-color": "#B9BBC4",
-          "line-width": 2
-        },
-        layout: {
-          visibility: "none"
-        }
-      });
-
-      // ✅ Aquí generamos la lista de estados ya con geojsonMunicipios cargado
-      const estadosMap = new Map();
-
-      geojsonMunicipios.features.forEach(f => {
-        const cveEnt = f.properties.CVEGEO.slice(0, 2);
-        const estadoInfo = diccionarioEstados[cveEnt];
-        if (!estadoInfo) return;
-
-        if (!estadosMap.has(estadoInfo.value)) {
-          estadosMap.set(estadoInfo.value, {
-            value: estadoInfo.value,
-            label: estadoInfo.label,
-            municipios: []
-          });
-        }
-
-        estadosMap.get(estadoInfo.value).municipios.push({
-          value: f.properties.CVEGEO,
-          label: f.properties.NOMGEO
-        });
-      });
-
-      const estados = Array.from(estadosMap.values());
-      const filtro = document.querySelector('dropdown-filtros-ubicacion');
-      if (filtro) filtro.setEstados(estados);
-    })
-    .catch(err => console.error("Error al cargar municipios para el filtro:", err));
-
-  // 6) Calles
-  map.addSource("calles", {
-    type: "geojson",
-    data: { type: "FeatureCollection", features: [] },
-    buffer: 512,
-    tolerance: 0.05
-  });
-
-  map.addLayer({
-    id: "calles-layer",
-    type: "line",
-    source: "calles",
-    layout: { visibility: "none" },
-    paint: {
-      "line-color": ["get", "colores"],
-      "line-width": [
-        "interpolate", ["linear"], ["zoom"],
-        1, 0.2,
-        7, 0.4,
-        15, 1
-      ]
+window.map.on("load", () => {
+  configurarCapas().then(() => {
+    const cardCapas = document.querySelector('card-capas');
+    if (cardCapas) {
+      setTimeout(() => {
+        cardCapas.sincronizarCheckboxes();
+        activarVistaNacional(); // O activarVistaLocal según el caso
+      }, 100); // Esperar un poco para asegurar que las capas estén listas
     }
   });
 });
@@ -209,22 +110,131 @@ map.on("load", () => {
 // =========================
 // FUNCIONES AUXILIARES
 // =========================
-function initializeLayerControls() {
-  const capas = [
-    { id: 'toggle-homicidios', layer: 'homicidios-layer' },
-    { id: 'toggle-parques', layer: 'parques-layer' },
-    { id: 'toggle-escuelas', layer: 'escuelas-layer' },
-    { id: 'toggle-calles', layer: 'calles-layer' }
-  ];
-  capas.forEach(capa => {
-    const checkbox = document.getElementById(capa.id);
-    if (checkbox) {
-      checkbox.addEventListener('change', function () {
-        map.setLayoutProperty(capa.layer, 'visibility', this.checked ? 'visible' : 'none');
-      });
-    }
-  });
+
+// Configuración para vista nacional
+function activarVistaNacional() {
+  const cardCapas = document.querySelector('card-capas');
+  if (cardCapas && typeof cardCapas.sincronizarCheckboxes === 'function') {
+    cardCapas.toggleLayerControls(false); // Deshabilitar controles
+    cardCapas.sincronizarCheckboxes(); // Sincronizar checkboxes
+  }
+
+  // Ajustar vista a nivel nacional
+  if (window.bboxNacional) {
+    window.map.fitBounds(window.bboxNacional, { padding: 20, duration: 1000 });
+  }
 }
 
-// Asignar la función al objeto global window
-window.initializeLayerControls = initializeLayerControls;
+// Configuración para vista estado/municipio
+export function activarVistaLocal(codigoEntidad, nivel) {
+  const cardCapas = document.querySelector('card-capas');
+  if (cardCapas) {
+    cardCapas.toggleLayerControls(true, nivel === 'municipio'); // Habilitar controles y prender "Calles" si es municipio
+  }
+
+  const capas = ["homicidios-layer", "parques-layer", "escuelas-layer", "calles-layer"];
+  if (nivel === 'estado') {
+    aplicarFiltros(capas, codigoEntidad, "CVE_ENT");
+  } else if (nivel === 'municipio') {
+    aplicarFiltros(capas, codigoEntidad, "CVEGEO");
+  } else {
+    console.error(`Nivel inválido: ${nivel}`);
+    return;
+  }
+
+  // Sincronizar los checkboxes después de aplicar filtros
+  if (cardCapas) {
+    cardCapas.sincronizarCheckboxes();
+  }
+}
+
+// Configuración de capas
+function configurarCapas() {
+  return new Promise((resolve) => {
+    // Homicidios
+    window.map.addSource("homicidios", {
+      type: "geojson",
+      data: "https://fabulous-dodol-d03b96.netlify.app/homicidios.geojson"
+    });
+    window.map.addLayer({
+      id: "homicidios-layer",
+      type: "circle",
+      source: "homicidios",
+      paint: {
+        "circle-radius": 3,
+        "circle-color": "#F9EFA5",
+        "circle-opacity": 0.8,
+        "circle-stroke-color": "black",
+        "circle-stroke-width": 1
+      },
+      filter: ["==", "CVE_ENT", ""]
+    });
+    window.map.setLayoutProperty("homicidios-layer", "visibility", "none");
+
+    // Parques
+    window.map.addSource("parques", {
+      type: "geojson",
+      data: "https://fabulous-dodol-d03b96.netlify.app/parques.geojson"
+    });
+    window.map.loadImage('imagenes/tree-fill.png', (error, image) => {
+      if (error) return console.error("Error al cargar imagen de parques", error);
+      if (!window.map.hasImage('icono-parque')) window.map.addImage('icono-parque', image);
+      window.map.addLayer({
+        id: 'parques-layer',
+        type: 'symbol',
+        source: 'parques',
+        layout: { 'icon-image': 'icono-parque', 'icon-size': 0.1 },
+        filter: ['==', 'CVE_ENT', '']
+      });
+      window.map.setLayoutProperty('parques-layer', 'visibility', 'none');
+    });
+
+    // Escuelas
+    window.map.addSource("escuelas", {
+      type: "geojson",
+      data: "https://fabulous-dodol-d03b96.netlify.app/escuelas.geojson"
+    });
+    window.map.loadImage('imagenes/school1.png', (error, image) => {
+      if (error) return console.error("Error al cargar imagen de escuelas", error);
+      if (!window.map.hasImage('icono-escuela')) window.map.addImage('icono-escuela', image);
+      window.map.addLayer({
+        id: 'escuelas-layer',
+        type: 'symbol',
+        source: 'escuelas',
+        layout: {
+          'icon-image': 'icono-escuela',
+          'icon-size': 0.1,
+          'icon-allow-overlap': true
+        },
+        filter: ['==', 'CVE_ENT', '']
+      });
+      window.map.setLayoutProperty('escuelas-layer', 'visibility', 'none');
+    });
+
+    // Crear la fuente de calles inicialmente vacía
+    window.map.addSource("calles", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] }, 
+      buffer: 512,
+      tolerance: 0.1
+    });
+
+    window.map.addLayer({
+      id: "calles-layer",
+      type: "line",
+      source: "calles",
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": ["get", "colores"],
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          1, 0.2,
+          7, 0.4,
+          15, 1
+        ]
+      }
+    });
+
+    resolve({ cargarCallesPorEstado });
+  });
+}

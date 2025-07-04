@@ -1,3 +1,5 @@
+import { estadosGeoJson, municipiosGeoJson } from './mapa_config.js';
+
 class GeocoderIntegrado extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
@@ -15,7 +17,6 @@ class GeocoderIntegrado extends HTMLElement {
     const wrapper = this.querySelector('#geocoder-wrapper');
     const container = this.querySelector('#geocoder-container');
     let isOpen = false;
-    let geocoderInitialized = false;
 
     // Mostrar/ocultar el panel del geocoder
     icon.addEventListener('click', (e) => {
@@ -23,16 +24,7 @@ class GeocoderIntegrado extends HTMLElement {
       isOpen = !isOpen;
       wrapper.style.display = isOpen ? 'block' : 'none';
 
-      if (isOpen && !geocoderInitialized) {
-        if (window.map && window.map.isStyleLoaded()) {
-          this.initGeocoder(container);
-        } else {
-          window.addEventListener('map-loaded', () => this.initGeocoder(container), { once: true });
-        }
-        geocoderInitialized = true;
-      }
-
-      if (isOpen) {
+      if (isOpen) { 
         setTimeout(() => {
           const input = container.querySelector('input');
           if (input) input.focus();
@@ -48,10 +40,22 @@ class GeocoderIntegrado extends HTMLElement {
       }
     };
     document.addEventListener('click', this._onDocClick);
+
+    // Inicializar el geocoder después de que los municipios hayan sido cargados
+    document.addEventListener('municipios-cargados', () => {
+      if (window.map && window.map.isStyleLoaded()) {
+        this.initGeocoder(container);
+      } else {
+        window.addEventListener('map-loaded', () => this.initGeocoder(container), { once: true });
+      }
+    });
   }
 
   disconnectedCallback() {
     document.removeEventListener('click', this._onDocClick);
+    if (this.geocoder) {
+      this.geocoder.off('result', this._onResult);
+    }
   }
 
   initGeocoder(container) {
@@ -104,31 +108,27 @@ class GeocoderIntegrado extends HTMLElement {
       // Mover el mapa a la ubicación
       map.flyTo({ center: lngLat, zoom: 12 });
 
-      // Cambiar a nivel municipal si existe la función
-      if (typeof seleccionarNivel === 'function') {
-        seleccionarNivel('municipal');
-      }
-
-      // Verificar si geojsonMunicipios está cargado
-      if (!geojsonMunicipios) {
-        console.error('geojsonMunicipios no está cargado.');
+      // Verificar si municipiosGeoJson está cargado
+      if (!municipiosGeoJson) {
+        console.error('Municipios no está cargado.');
         return;
       }
 
-      // Encontrar el municipio correspondiente
+      // Encontrar el municipio correspondiente usando coordenadas
       const point = turf.point(lngLat);
-      const municipio = geojsonMunicipios.features.find(mun =>
+      const municipio = municipiosGeoJson.features.find(mun =>
         turf.booleanPointInPolygon(point, mun)
       );
 
       if (!municipio) {
         console.warn('No se encontró municipio en el GeoJSON.');
+        alert('No se encontró el municipio correspondiente a la ubicación seleccionada.');
         return;
       }
 
       const nom_ent = municipio.properties.NOM_ENT;
-      const cve_ent = municipio.properties.CVEGEO.slice(0, 2); // solo 2 dígitos
-      const cvegeo = municipio.properties.CVEGEO;
+      const cve_ent = municipio.properties.CVEGEO.slice(0, 2); // Código de estado
+      const cvegeo = municipio.properties.CVEGEO; // Código de municipio
 
       // Actualizar dropdowns dentro del web component
       const filtro = document.querySelector('dropdown-filtros-ubicacion');
@@ -137,6 +137,7 @@ class GeocoderIntegrado extends HTMLElement {
 
       if (!selectEstado || !selectMunicipio) {
         console.error("No se encontraron los selectores de estado o municipio.");
+        alert("Hubo un problema al cargar los filtros de ubicación. Por favor, recarga la página.");
         return;
       }
 
@@ -150,18 +151,34 @@ class GeocoderIntegrado extends HTMLElement {
         return;
       }
 
+      // Cambiar estado y emitir evento personalizado
       selectEstado.value = estadoOption.value;
-      selectEstado.dispatchEvent(new Event('change'));
+      filtro.dispatchEvent(new CustomEvent('estado-change', {
+        detail: { value: selectEstado.value },
+        bubbles: true
+      }));
 
-      // Esperar a que los municipios se llenen antes de seleccionar municipio
+      // Esperar a que se carguen municipios
       setTimeout(() => {
-        selectMunicipio.value = cvegeo;
-        selectMunicipio.dispatchEvent(new Event('change'));
-      }, 300);
+        const municipioOption = Array.from(selectMunicipio.options).find(opt =>
+          opt.value === cvegeo
+        );
+
+        if (!municipioOption) {
+          console.warn("Municipio no encontrado en dropdown:", cvegeo);
+          alert(`No se encontró el municipio con código "${cvegeo}" en el dropdown.`);
+          return;
+        }
+
+        selectMunicipio.value = municipioOption.value;
+        filtro.dispatchEvent(new CustomEvent('municipio-change', {
+          detail: { value: selectMunicipio.value },
+          bubbles: true
+        }));
+      }, 0);
     });
 
     container.appendChild(geocoder.onAdd(window.map));
-    
   }
 }
 

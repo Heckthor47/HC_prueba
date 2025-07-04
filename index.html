@@ -17,8 +17,6 @@
   <link rel="icon" href="imagenes/logo_2025.png" type="image/png">
 </head>
 <body class="mapa-page">
-
-  
   <div class="page">
     <header-gob></header-gob>
     <!-- CONTENIDO PRINCIPAL -->
@@ -66,28 +64,26 @@
     </div>
   <footer-gob></footer-gob>
 
-  <!-- Librerías externas -->
-  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-  <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.min.js"></script>
+<!-- Librerías externas -->
+<script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js" defer></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js" defer></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.5.0/dist/maplibre-gl-geocoder.min.js" defer></script>
 
-  <!-- Archivos propios -->
-  <!-- 1. Componentes básicos -->
-  <script src="scripts/filtro.js" defer></script> <!-- Define <dropdown-filtros-ubicacion> -->
-  <script src="scripts/restablecer.js" defer></script> <!-- Define <boton-reset-mapa> -->
-  <script src="scripts/header.js" defer></script> <!-- Define <header-gob> -->
-  <script src="scripts/footer.js" defer></script> <!-- Define <footer-gob> -->
-  <script src="scripts/card-capas.js" defer></script> <!-- Define <card-capas> -->
+<!-- Componentes UI -->
+<script src="scripts/header.js" defer></script>
+<script src="scripts/footer.js" defer></script>
+<script type="module" src="scripts/geocoder.js"></script>
 
-  <!-- 2. Configuración del mapa -->
-  <script src="scripts/mapa_config.js" defer></script> <!-- Configura el mapa y sus capas -->
+<!-- Config y lógica del mapa -->
+<script type="module" src="scripts/mapa_config.js"></script>
+<script type="module" src="scripts/filtro.js"></script>
+<script type="module" src="scripts/eventos_selector.js"></script>
+<script type="module" src="scripts/capas.js"></script>
+<script type="module" src="scripts/card-capas.js"></script>
+<script type="module" src="scripts/restablecer.js" defer></script>
 
-  <!-- 3. Eventos y lógica específica -->
-  <script src="scripts/eventos_selector.js" defer></script> <!-- Maneja eventos de selección -->
-  <script src="scripts/main.js"></script> <!-- Lógica principal -->
+<!-- Entrada principal -->
+<script type="module" src="scripts/main.js"></script>
 
-  <!-- 4. Otros scripts -->
-  <script src="scripts/geocoder.js" defer></script> <!-- Configura el geocodificador -->
-  <script src="scripts/capas.js" defer></script>
 </body>
 </html>

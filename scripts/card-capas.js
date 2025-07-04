@@ -1,3 +1,4 @@
+import { aplicarFiltros } from './capas.js';
 class CardCapas extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
@@ -7,22 +8,22 @@ class CardCapas extends HTMLElement {
         </div>
         <div class="leyendas-contenido" style="max-height: 300px; overflow-y: auto;">
           <label class="switch">
-            <input type="checkbox" id="toggle-calles" data-layer="toggle-calles">
+            <input type="checkbox" id="toggle-calles" data-layer="calles-layer">
             <span class="slider round"></span>
             <span class="layer-label">Calles</span>
           </label>
           <label class="switch">
-            <input type="checkbox" id="toggle-escuelas" data-layer="toggle-escuelas">
+            <input type="checkbox" id="toggle-escuelas" data-layer="escuelas-layer">
             <span class="slider round"></span>
             <span class="layer-label">Escuelas</span>
           </label>
           <label class="switch">
-            <input type="checkbox" id="toggle-parques" data-layer="toggle-parques">
+            <input type="checkbox" id="toggle-parques" data-layer="parques-layer">
             <span class="slider round"></span>
             <span class="layer-label">Parques</span>
           </label>
           <label class="switch">
-            <input type="checkbox" id="toggle-homicidios" data-layer="toggle-homicidios" >
+            <input type="checkbox" id="toggle-homicidios" data-layer="homicidios-layer">
             <span class="slider round"></span>
             <span class="layer-label">Homicidios</span>
           </label>
@@ -30,29 +31,92 @@ class CardCapas extends HTMLElement {
       </div>
     `;
 
-    // Lógica para emitir evento cuando se prende/apaga una capa
+    // Sincronizar checkboxes con las capas al cargar el componente
+    this.sincronizarCheckboxes();
+
+    // Registrar eventos de cambio en los checkboxes
     this.querySelectorAll('input[type="checkbox"]').forEach(input => {
       input.addEventListener('change', (e) => {
         const layer = input.getAttribute('data-layer');
-        this.dispatchEvent(new CustomEvent('layer-toggle', {
-          detail: { layer, checked: input.checked },
-          bubbles: true,
-          composed: true
-        }));
+        const checked = input.checked;
+
+        console.log(`Checkbox cambiado: ${layer}, estado: ${checked}`);
+
+        // Actualizar visibilidad de la capa en el mapa
+        if (window.map && window.map.getLayer(layer)) {
+          window.map.setLayoutProperty(layer, 'visibility', checked ? 'visible' : 'none');
+        }
       });
+    });
+
+    document.addEventListener('municipio-change', (e) => {
+      const cvegeo = e.detail.value; // Código del municipio desde el evento
+      const capas = ["homicidios-layer", "parques-layer", "escuelas-layer", "calles-layer"];
+
+      if (cvegeo) {
+        aplicarFiltros(capas, cvegeo, "CVEGEO");
+        console.log(`Filtros aplicados para el municipio con código: ${cvegeo}`);
+      } else {
+        console.warn("No se pudo obtener el código `cvegeo` del municipio seleccionado.");
+      }
+    });
+  }
+
+  // Sincronizar el estado de los checkboxes con las capas del mapa
+  sincronizarCheckboxes() {
+    const capas = [
+      { id: 'toggle-homicidios', layer: 'homicidios-layer' },
+      { id: 'toggle-parques', layer: 'parques-layer' },
+      { id: 'toggle-escuelas', layer: 'escuelas-layer' },
+      { id: 'toggle-calles', layer: 'calles-layer' }
+    ];
+
+    capas.forEach(({ id, layer }) => {
+      const checkbox = this.querySelector(`#${id}`);
+      if (!checkbox || !window.map.getLayer(layer)) return;
+
+      try {
+        const visibility = window.map.getLayoutProperty(layer, 'visibility');
+        checkbox.checked = visibility === 'visible';
+      } catch (error) {
+        console.warn(`No se pudo obtener la visibilidad de la capa "${layer}":`, error);
+        checkbox.checked = false;
+      }
+    });
+  }
+
+  // Función para habilitar/deshabilitar controles de capas
+  toggleLayerControls(enabled, autoEnableCalles = false) {
+    const capas = [
+      'toggle-homicidios',
+      'toggle-parques',
+      'toggle-escuelas',
+      'toggle-calles'
+    ];
+
+    capas.forEach(id => {
+      const checkbox = this.querySelector(`#${id}`);
+      if (!checkbox) return;
+
+      checkbox.disabled = !enabled;
+      if (!enabled) checkbox.checked = false;
+      if (enabled && autoEnableCalles && id === 'toggle-calles') {
+        checkbox.checked = true;
+      }
+
+      const layerId = id.replace('toggle-', '') + '-layer';
+      if (window.map && window.map.getLayer(layerId)) {
+        try {
+          const visible = checkbox.checked ? 'visible' : 'none';
+          window.map.setLayoutProperty(layerId, 'visibility', visible);
+        } catch (error) {
+          console.error(`Error modificando visibilidad de la capa "${layerId}":`, error);
+        }
+      } else {
+        console.warn(`La capa "${layerId}" no existe en el mapa.`);
+      }
     });
   }
 }
-customElements.define('card-capas', CardCapas);
 
-document.addEventListener('DOMContentLoaded', () => {
-  const cardCapas = document.querySelector('card-capas');
-  if (cardCapas) {
-    setTimeout(() => {
-      const checkbox = cardCapas.querySelector('#toggle-calles');
-      if (checkbox) {
-        checkbox.addEventListener('change', () => { /* ... */ });
-      }
-    }, 0);
-  }
-});
+customElements.define('card-capas', CardCapas);

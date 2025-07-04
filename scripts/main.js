@@ -1,3 +1,6 @@
+import { aplicarFiltros } from './capas.js';
+import { municipiosGeoJson } from './mapa_config.js';
+
 // Punto de entrada
 document.addEventListener("DOMContentLoaded", () => {
   configurarSelectorEstado();
@@ -22,7 +25,28 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }, 0); 
+
+document.addEventListener('estado-change', (e) => {
+  const codigoEntidad = e.detail.value.replace('calles', '');
+  console.log(`Estado cambiado: ${codigoEntidad}`);
   
+  // Usar la función genérica para aplicar filtros al estado
+  const capas = ["calles-layer", "parques-layer", "homicidios-layer", "escuelas-layer"];
+  aplicarFiltros(capas, codigoEntidad, "CVE_ENT");
+});
+
+document.addEventListener('municipio-change', (e) => {
+  const cvegeo = e.detail.value;
+  console.log(`Municipio cambiado: ${cvegeo}`);
+  
+  // Usar la función genérica para aplicar filtros al municipio
+  const capas = ["calles-layer", "parques-layer", "homicidios-layer", "escuelas-layer"];
+  aplicarFiltros(capas, cvegeo, "CVEGEO");
+});
+
+document.addEventListener("municipios-cargados", () => {
+  console.log("Municipios cargados en main.js:", municipiosGeoJson);
+});
   const filtro = document.querySelector('dropdown-filtros-ubicacion');
   if (!filtro) {
     console.error("El elemento <dropdown-filtros-ubicacion> no está presente en el DOM.");
@@ -30,15 +54,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   filtro.addEventListener('municipio-change', (e) => {
-    if (!geojsonMunicipios) {
-      console.error("geojsonMunicipios no está cargado.");
-      return;
-    }
     const cvegeo = e.detail.value;
-    const feature = geojsonMunicipios.features.find(f => f.properties.CVEGEO === cvegeo);
+    const feature = municipiosGeoJson.features.find(f => f.properties.CVEGEO === cvegeo);
     if (feature) {
       const bounds = turf.bbox(feature);
-      map.fitBounds(bounds, { padding: 20 });
+      window.map.fitBounds(bounds, { padding: 20 });
     }
   });
 });

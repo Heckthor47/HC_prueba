@@ -1,3 +1,8 @@
+import { estadosGeoJson, municipiosGeoJson } from './mapa_config.js';
+import { aplicarFiltros } from './capas.js'; 
+import { activarVistaLocal } from './mapa_config.js';
+import { cargarCallesPorEstado } from './mapa_config.js';
+
 // --- eventos_selector.js ---
 // Función para manejar el cambio de estado y municipio
 function configurarSelectorEstado() {
@@ -38,8 +43,8 @@ function configurarSelectorEstado() {
     // Dibujar polígono del estado
     dibujarEstado(feature);
 
-    if (!geojsonMunicipios){
-      console.error("geojsonMunicipios no está cargado.");
+    if (!municipiosGeoJson) {
+      console.error("municipiosGeoJson no está cargado.");
       return;
     }
 
@@ -47,20 +52,20 @@ function configurarSelectorEstado() {
     const cve_ent = codigoEntidad.padStart(2, '0'); // Formato de 2 dígitos
     const municipiosDelEstado = {
       type: "FeatureCollection",
-      features: geojsonMunicipios.features.filter(f => f.properties.CVE_ENT === cve_ent)
+      features: municipiosGeoJson.features.filter(f => f.properties.CVE_ENT === cve_ent)
     };
 
-    if (map.getSource("municipios-source")) {
-      map.getSource("municipios-source").setData(municipiosDelEstado);
-      map.setLayoutProperty("municipio-fill", "visibility", "visible");
-      map.setLayoutProperty("municipio-outline", "visibility", "visible");
+    if (window.map.getSource("municipios-source")) {
+      window.map.getSource("municipios-source").setData(municipiosDelEstado);
+      window.map.setLayoutProperty("municipio-fill", "visibility", "visible");
+      window.map.setLayoutProperty("municipio-outline", "visibility", "visible");
     } else {
       console.error("La fuente 'municipios-source' no está disponible.");
     }
 
     // Ajustar vista al estado completo
     const bboxEstado = turf.bbox(feature);
-    map.fitBounds(bboxEstado, { padding: 20, duration: 1000 });
+    window.map.fitBounds(bboxEstado, { padding: 20, duration: 1000 });
 
     // Aplicar filtros y visibilidad de capas
     aplicarFiltrosEstado(codigoEntidad);
@@ -73,55 +78,57 @@ function configurarSelectorEstado() {
   // Cambio de municipio
   // =========================
   selectorMunicipio.addEventListener("change", () => {
-  const cvegeo = selectorMunicipio.value;
+    const cvegeo = selectorMunicipio.value;
 
-  // Si se deselecciona municipio → volver al estado
-  if (!cvegeo) {
-  const seleccion = selectorEstado.value;
-  if (!seleccion) return;
+    // Si se deselecciona municipio → volver al estado
+    if (!cvegeo) {
+      const seleccion = selectorEstado.value;
+      if (!seleccion) return;
 
-  const codigoEntidad = seleccion.replace("calles", "");
-  const feature = estadosGeoJson.features.find(f => f.properties.CVE_ENT == codigoEntidad);
-  if (feature) {
-    dibujarEstado(feature);
-    const bboxEstado = turf.bbox(feature);
-    map.fitBounds(bboxEstado, { padding: 20, duration: 1000 });
-  }
+      const codigoEntidad = seleccion.replace("calles", "");
+      const feature = estadosGeoJson.features.find(f => f.properties.CVE_ENT == codigoEntidad);
+      if (feature) {
+        dibujarEstado(feature);
+        const bboxEstado = turf.bbox(feature);
+        window.map.fitBounds(bboxEstado, { padding: 20, duration: 1000 });
+      }
 
-  // Filtrar solo municipios del estado
-  const municipiosDelEstado = {
-    type: "FeatureCollection",
-    features: geojsonMunicipios.features.filter(f => f.properties.CVE_ENT === codigoEntidad)
-  };
+      // Filtrar solo municipios del estado
+      const municipiosDelEstado = {
+        type: "FeatureCollection",
+        features: municipiosGeoJson.features.filter(f => f.properties.CVE_ENT === codigoEntidad)
+      };
 
-  // Restaurar municipios del estado
-  if (map.getSource("municipios-source")) {
-    map.getSource("municipios-source").setData(municipiosDelEstado);
-  }
+      // Restaurar municipios del estado
+      if (window.map.getSource("municipios-source")) {
+        window.map.getSource("municipios-source").setData(municipiosDelEstado);
+      }
 
-  // Mostrar capa de municipios
-  if (map.getLayer("municipio-fill")) {
-    map.setLayoutProperty("municipio-fill", "visibility", "visible");
-  }
-  if (map.getLayer("municipio-outline")) {
-    map.setLayoutProperty("municipio-outline", "visibility", "visible");
-  }
+      // Mostrar capa de municipios
+      if (window.map.getLayer("municipio-fill")) {
+        window.map.setLayoutProperty("municipio-fill", "visibility", "visible");
+      }
+      if (window.map.getLayer("municipio-outline")) {
+        window.map.setLayoutProperty("municipio-outline", "visibility", "visible");
+      }
 
-  return;
-}
+      return;
+    }
 
+    // Seleccionó un municipio → solo hacer zoom, sin cambiar filtros
+    const feature = municipiosGeoJson.features.find(f => f.properties.CVEGEO === cvegeo);
+    if (!feature) {
+      console.warn("Municipio no encontrado:", cvegeo);
+      return;
+    }
 
-  // Seleccionó un municipio → solo hacer zoom, sin cambiar filtros
-  const feature = geojsonMunicipios.features.find(f => f.properties.CVEGEO === cvegeo);
-  if (!feature) {
-    console.warn("Municipio no encontrado:", cvegeo);
-    return;
-  }
+    dibujarMunicipio(feature);
 
-  dibujarMunicipio(feature);
+    const bboxMunicipio = turf.bbox(feature);
+    window.map.fitBounds(bboxMunicipio, { padding: 20, duration: 1000 });
 
-  const bboxMunicipio = turf.bbox(feature);
-  map.fitBounds(bboxMunicipio, { padding: 20, duration: 1000 });
+    // Aplicar filtros por municipio (esto es lo que hace que funcionen las capas)
+    aplicarFiltrosMunicipio(cvegeo);
   });
 }
 
@@ -133,34 +140,34 @@ function configurarSelectorEstado() {
 function limpiarEstado() {
   removerCapaEstado();
   ["homicidios-layer", "parques-layer", "escuelas-layer"].forEach(id => {
-    map.setFilter(id, ["==", "CVE_ENT", ""]);
-    map.setLayoutProperty(id, "visibility", "none");
+    window.map.setFilter(id, ["==", "CVE_ENT", ""]);
+    window.map.setLayoutProperty(id, "visibility", "none");
   });
-  map.getSource("calles").setData({ type: "FeatureCollection", features: [] });
-  map.setLayoutProperty("calles-layer", "visibility", "none");
-    // Ocultar municipios
-  if (map.getLayer("municipio-fill")) {
-    map.setLayoutProperty("municipio-fill", "visibility", "none");
+  window.map.getSource("calles").setData({ type: "FeatureCollection", features: [] });
+  window.map.setLayoutProperty("calles-layer", "visibility", "none");
+  
+  // Ocultar municipios
+  if (window.map.getLayer("municipio-fill")) {
+    window.map.setLayoutProperty("municipio-fill", "visibility", "none");
   }
-  if (map.getLayer("municipio-outline")) {
-    map.setLayoutProperty("municipio-outline", "visibility", "none");
+  if (window.map.getLayer("municipio-outline")) {
+    window.map.setLayoutProperty("municipio-outline", "visibility", "none");
   }
 
-  if (bboxNacional) map.fitBounds(bboxNacional, { padding: 20, duration: 1000 });
-
+  if (window.bboxNacional) window.map.fitBounds(window.bboxNacional, { padding: 20, duration: 1000 });
 }
 
 // Dibujar el polígono del estado
 function dibujarEstado(feature) {
   removerCapaEstado();
-  map.addSource("estado-source", { type: "geojson", data: feature });
-  map.addLayer({
+  window.map.addSource("estado-source", { type: "geojson", data: feature });
+  window.map.addLayer({
     id: "estado-fill",
     type: "fill",
     source: "estado-source",
     paint: { "fill-color": "#B0C4DE", "fill-opacity": 0.2 }
   });
-  map.addLayer({
+  window.map.addLayer({
     id: "estado-outline",
     type: "line",
     source: "estado-source",
@@ -168,23 +175,22 @@ function dibujarEstado(feature) {
   });
 }
 
-// Dibujar el polígono del municipio
+// Dibujar el polígono del municipio (SIN amarillo - usar la fuente existente)
 function dibujarMunicipio(feature) {
-  if (map.getSource("municipios-source")) {
-    // Actualiza los datos de la fuente
-    map.getSource("municipios-source").setData(feature);
+  if (window.map.getSource("municipios-source")) {
+    // Actualiza los datos de la fuente existente
+    window.map.getSource("municipios-source").setData(feature);
   }
 
-  // Muestra las capas 
-  if (map.getLayer("municipio-fill")) {
-    map.setLayoutProperty("municipio-fill", "visibility", "visible");
+  // Muestra las capas existentes
+  if (window.map.getLayer("municipio-fill")) {
+    window.map.setLayoutProperty("municipio-fill", "visibility", "visible");
   }
 
-  if (map.getLayer("municipio-outline")) {
-    map.setLayoutProperty("municipio-outline", "visibility", "visible"); 
+  if (window.map.getLayer("municipio-outline")) {
+    window.map.setLayoutProperty("municipio-outline", "visibility", "visible"); 
   }
 }
-
 
 // Aplicar filtros y visibilidad de capas por estado
 function aplicarFiltrosEstado(codigoEntidad) {
@@ -194,13 +200,13 @@ function aplicarFiltrosEstado(codigoEntidad) {
     "escuelas-layer": "toggle-escuelas"
   };
   Object.entries(layerToggleMapping).forEach(([layerId, toggleId]) => {
-    map.setFilter(layerId, ["==", "CVE_ENT", codigoEntidad]);
+    window.map.setFilter(layerId, ["==", "CVE_ENT", codigoEntidad]);
     const isChecked = document.getElementById(toggleId).checked;
-    map.setLayoutProperty(layerId, "visibility", isChecked ? "visible" : "none");
+    window.map.setLayoutProperty(layerId, "visibility", isChecked ? "visible" : "none");
   });
 
-  map.setFilter("calles-layer", ["==", "CVE_ENT", codigoEntidad]);
-  map.setLayoutProperty("calles-layer", "visibility", "visible");
+  window.map.setFilter("calles-layer", ["==", "CVE_ENT", codigoEntidad]);
+  window.map.setLayoutProperty("calles-layer", "visibility", "visible");
 
   // Activar el checkbox de calles
   const toggleCalles = document.getElementById("toggle-calles");
@@ -209,7 +215,7 @@ function aplicarFiltrosEstado(codigoEntidad) {
   }
 }
 
-// Aplicar filtros por municipio
+// Aplicar filtros por municipio (CLAVE para que funcionen las capas a nivel municipal)
 function aplicarFiltrosMunicipio(cvegeo) {
   const layerToggleMapping = {
     "homicidios-layer": "toggle-homicidios",
@@ -221,24 +227,22 @@ function aplicarFiltrosMunicipio(cvegeo) {
     const toggle = document.getElementById(toggleId);
 
     const aplicarFiltro = () => {
-      map.setFilter(layerId, ["==", "CVEGEO", cvegeo]);
+      window.map.setFilter(layerId, ["==", "CVEGEO", cvegeo]);
       const visible = toggle?.checked ? "visible" : "none";
-      map.setLayoutProperty(layerId, "visibility", visible);
+      window.map.setLayoutProperty(layerId, "visibility", visible);
       console.log(`Capa ${layerId} → visibilidad: ${visible}`);
     };
 
-    if (map.getLayer(layerId)) {
+    if (window.map.getLayer(layerId)) {
       aplicarFiltro();
     } else {
       // Espera a que la capa esté disponible antes de aplicar
-      map.once('idle', () => {
-        if (map.getLayer(layerId)) aplicarFiltro();
+      window.map.once('idle', () => {
+        if (window.map.getLayer(layerId)) aplicarFiltro();
       });
     }
   });
 }
-
-
 
 // Recargar datos de calles
 function recargarCalles(seleccion) {
@@ -251,7 +255,7 @@ function recargarCalles(seleccion) {
       const sampled = cdcdFeatures.filter(() => Math.random() < 0.4);
       const finalFeatures = others.concat(sampled);
 
-      const source = map.getSource("calles");
+      const source = window.map.getSource("calles");
       if (!source) {
         console.error('La fuente "calles" no está disponible.');
         return;
@@ -259,39 +263,82 @@ function recargarCalles(seleccion) {
 
       source.setData({ type: "FeatureCollection", features: finalFeatures });
       const vis = document.getElementById("toggle-calles").checked ? "visible" : "none";
-      map.setLayoutProperty("calles-layer", "visibility", vis);
+      window.map.setLayoutProperty("calles-layer", "visibility", vis);
     })
     .catch(err => console.error('Error cargando calles:', err));
 }
 
 // Remover capas del estado
 function removerCapaEstado() {
-  if (map.getLayer("estado-fill")) map.removeLayer("estado-fill");
-  if (map.getLayer("estado-outline")) map.removeLayer("estado-outline");
-  if (map.getSource("estado-source")) map.removeSource("estado-source");
+  if (window.map.getLayer("estado-fill")) window.map.removeLayer("estado-fill");
+  if (window.map.getLayer("estado-outline")) window.map.removeLayer("estado-outline");
+  if (window.map.getSource("estado-source")) window.map.removeSource("estado-source");
 }
+
 // Popup fluido al mover el mouse sobre municipios
 let popupMunicipio = new maplibregl.Popup({
   closeButton: false,
   closeOnClick: false
 });
 
-map.on("mousemove", "municipio-fill", (e) => {
-  map.getCanvas().style.cursor = "pointer";
+window.map.on("mousemove", "municipio-fill", (e) => {
+  window.map.getCanvas().style.cursor = "pointer";
 
   const props = e.features[0].properties;
   const nombre = props.NOMGEO || "Municipio";
   const densidad = props.prom_densidad_pob
-  ? Number(props.prom_densidad_pob).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  : "N/D";
+    ? Number(props.prom_densidad_pob).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "N/D";
 
   popupMunicipio
     .setLngLat(e.lngLat)
     .setHTML(`<strong>${nombre}</strong><br>Densidad promedio hab/km<sup>2</sup>: ${densidad}`)
-    .addTo(map);
+    .addTo(window.map);
 });
 
-map.on("mouseleave", "municipio-fill", () => {
-  map.getCanvas().style.cursor = "";
+window.map.on("mouseleave", "municipio-fill", () => {
+  window.map.getCanvas().style.cursor = "";
   popupMunicipio.remove();
 });
+
+// Eventos modernos de tabata-local para compatibilidad
+document.addEventListener('estado-change', (e) => {
+  const codigoEntidad = e.detail.value;
+
+  if (!codigoEntidad) {
+    console.warn(`No se encontró el estado con código: ${codigoEntidad}`);
+    return;
+  }
+
+  // Extraer código numérico
+  const codigo = codigoEntidad.replace('calles', '');
+  
+  // Activar la vista local para el estado
+  if (typeof activarVistaLocal === 'function') {
+    activarVistaLocal(codigo, 'estado');
+  }
+
+  // Cargar calles dinámicamente según el estado seleccionado
+  if (typeof cargarCallesPorEstado === 'function') {
+    cargarCallesPorEstado(codigo);
+  }
+});
+
+document.addEventListener("municipio-change", (e) => {
+  const cvegeo = e.detail.value;
+
+  if (!cvegeo) return;
+
+  // Buscar el municipio
+  const feature = municipiosGeoJson.features.find(f => f.properties.CVEGEO === cvegeo);
+  if (!feature) { 
+    console.warn("Municipio no encontrado"); 
+    return; 
+  }
+
+  // Aplicar filtros por municipio (esto es lo importante para que funcionen las capas)
+  aplicarFiltrosMunicipio(cvegeo);
+});
+
+// Hacer la función disponible globalmente
+window.configurarSelectorEstado = configurarSelectorEstado;

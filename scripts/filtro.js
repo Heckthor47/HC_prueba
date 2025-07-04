@@ -1,3 +1,7 @@
+import { municipiosGeoJson } from './mapa_config.js';
+import { estadosGeoJson } from './mapa_config.js';
+import { activarVistaLocal } from './mapa_config.js';
+
 // ==========================
 // Diccionario de estados (CVE_ENT -> nombre y key)
 // ==========================
@@ -65,6 +69,11 @@ class DropdownFiltrosUbicacion extends HTMLElement {
 
   _initListeners() {
     this.estadoSelect.addEventListener('change', () => {
+      if (!this.estadoSelect || !this.estadoSelect.value) {
+        console.warn("El selector de estado no tiene un valor válido.");
+        return;
+      }
+
       const estado = this.estados.find(e => e.value === this.estadoSelect.value);
       if (estado) {
         this._poblarMunicipios(estado.municipios);
@@ -73,6 +82,8 @@ class DropdownFiltrosUbicacion extends HTMLElement {
         this._poblarMunicipios([]);
         this.municipioSelect.disabled = true;
       }
+
+      // Disparar evento personalizado
       this.dispatchEvent(new CustomEvent('estado-change', {
         detail: { value: this.estadoSelect.value },
         bubbles: true
@@ -122,6 +133,128 @@ customElements.define('dropdown-filtros-ubicacion', DropdownFiltrosUbicacion);
 // ==========================
 // Cargar municipios y poblar
 // ==========================
+document.addEventListener("municipios-cargados", () => {
+  if (!municipiosGeoJson || !municipiosGeoJson.features) {
+    console.error("Los datos de municipios no están disponibles.");
+    return;
+  }
+  console.log("Datos de municipios disponibles:", municipiosGeoJson);
+  poblarFiltrosConMunicipios(municipiosGeoJson);
+});
 
+// Función para poblar los filtros con los municipios
+function poblarFiltrosConMunicipios(data) {
+  const estadosMap = new Map();
 
+  data.features.forEach(f => {
+    const cveEnt = f.properties.CVE_ENT; // Usar directamente la propiedad CVE_ENT
+    const estadoInfo = diccionarioEstados[cveEnt];
+    if (!estadoInfo) return;
 
+    if (!estadosMap.has(estadoInfo.value)) {
+      estadosMap.set(estadoInfo.value, {
+        value: estadoInfo.value,
+        label: estadoInfo.label,
+        municipios: []
+      });
+    }
+
+    estadosMap.get(estadoInfo.value).municipios.push({
+      value: f.properties.CVEGEO,
+      label: f.properties.NOMGEO
+    });
+  });
+
+  const estados = Array.from(estadosMap.values());
+  const filtro = document.querySelector('dropdown-filtros-ubicacion');
+  if (filtro) {
+    filtro.setEstados(estados);
+    console.log("Estados y municipios configurados:", estados);
+  } else {
+    console.error("No se encontró el elemento <dropdown-filtros-ubicacion>.");
+  }
+}
+
+// Escuchar el evento de cambio de estado
+document.addEventListener('estado-change', (e) => {
+  const codigoEntidad = e.detail.value;
+
+  if (!codigoEntidad) {
+    console.warn(`No se encontró un código de estado válido: ${codigoEntidad}`);
+    return;
+  }
+
+  // Extraer el código numérico del estado (quitar "calles" del principio)
+  const codigoNumerico = codigoEntidad.replace('calles', '');
+
+  // Mover el mapa al estado seleccionado
+  moverMapaAEstado(codigoNumerico);
+
+  // Activar la vista local para el estado
+  activarVistaLocal(codigoNumerico, 'estado');
+
+  // Cargar calles dinámicamente según el estado seleccionado
+  const source = window.map.getSource('calles');
+  if (source) {
+    source.setData(`https://fabulous-dodol-d03b96.netlify.app/calles${codigoNumerico}.geojson`);
+  } else {
+    console.warn('La fuente "calles" todavía no existe en el mapa.');
+  }
+
+  // Limpiar el dropdown de municipios
+  const filtro = document.querySelector('dropdown-filtros-ubicacion');
+  const selectMunicipio = filtro?.querySelector('#select-municipio');
+
+  if (!selectMunicipio) {
+    console.error("No se encontró el dropdown de municipios.");
+    return;
+  }
+
+  selectMunicipio.innerHTML = '<option value="">-- Municipio --</option>';
+
+  // Filtrar municipios por el estado seleccionado
+  const municipios = municipiosGeoJson.features.filter(mun =>
+    mun.properties.CVE_ENT === codigoNumerico.padStart(2, '0') // Asegurar formato de 2 dígitos
+  );
+
+  // Poblar el dropdown con los municipios del estado seleccionado
+  municipios.forEach(mun => {
+    const opt = document.createElement('option');
+    opt.value = mun.properties.CVEGEO; // Código del municipio
+    opt.textContent = mun.properties.NOMGEO; // Nombre del municipio
+    selectMunicipio.appendChild(opt);
+  });
+
+  // Habilitar el dropdown de municipios
+  selectMunicipio.disabled = false;
+  console.log(`Dropdown de municipios actualizado para el estado: ${codigoEntidad}`);
+});
+
+// Escuchar el evento de cambio de municipio
+document.addEventListener('municipio-change', (e) => {
+  const cvegeo = e.detail.value;
+  if (cvegeo) {
+    moverMapaAMunicipio(cvegeo);
+    activarVistaLocal(cvegeo, 'municipio');
+  }
+});
+
+export function moverMapaAEstado(codigoEntidad) {
+  const estadoFeature = estadosGeoJson.features.find(f => f.properties.CVE_ENT === codigoEntidad);
+  if (estadoFeature) {
+    const bbox = turf.bbox(estadoFeature); // Calcular el bounding box del estado
+    window.map.fitBounds(bbox, { padding: 20, duration: 1000 });
+  } else {
+    console.warn(`No se encontró el estado con código: ${codigoEntidad}`);
+  }
+}
+
+export function moverMapaAMunicipio(cvegeo) {
+  const municipioFeature = municipiosGeoJson.features.find(f => f.properties.CVEGEO === cvegeo);
+  if (municipioFeature) {
+    const bbox = turf.bbox(municipioFeature); // Calcular el bounding box del municipio
+    window.map.fitBounds(bbox, { padding: 20, duration: 1000 });
+  } else {
+    console.warn(`No se encontró el municipio con código: ${cvegeo}`);
+  }
+}
