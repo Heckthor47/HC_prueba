@@ -316,7 +316,8 @@ function removerCapaEstado() {
 // Popup fluido al mover el mouse sobre municipios
 let popupMunicipio = new maplibregl.Popup({
   closeButton: false,
-  closeOnClick: false
+  closeOnClick: false,
+  className: 'glass-effect' // Aplicar efecto de cristal
 });
 
 window.map.on("mousemove", "municipio-fill", (e) => {
@@ -330,7 +331,15 @@ window.map.on("mousemove", "municipio-fill", (e) => {
 
   popupMunicipio
     .setLngLat(e.lngLat)
-    .setHTML(`<strong>${nombre}</strong><br>Densidad promedio hab/km<sup>2</sup>: ${densidad}`)
+    .setHTML(`
+      <div class="popup-header">
+        <strong>${nombre}</strong>
+      </div>
+      <div class="popup-body">
+        <div class="popup-label">Densidad poblacional</div>
+        <div class="popup-value">${densidad} <span style="font-size: 12px; color: #718096;">hab/km²</span></div>
+      </div>
+    `)
     .addTo(window.map);
 });
 

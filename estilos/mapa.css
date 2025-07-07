@@ -176,6 +176,11 @@ html, body, .page {
   font-size: 14px;
 }
 
+/* Agregar más espaciado al primer switch para separarlo del título */
+.switch:first-child {
+  margin-top: 16px;
+}
+
 .switch input {
   display: none;
 }
@@ -315,21 +320,126 @@ geocoder-integrado .map-control-button {
 
 /* DROPDOWNS */
 .dropdown-filtros-ubicacion {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
   max-height: 320px;      
-  overflow-y: auto;     
+  overflow: visible; /* Permitir que el dropdown se salga */     
 }
 
 
 .dropdown-filtros-ubicacion select {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
   font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  color: #000;
+  background-color: #fff;
+  height: 36px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: var(--dropdown-arrow-svg);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 30px;
+  transition: border-color 0.3s ease;
+}
+
+.dropdown-filtros-ubicacion select:focus {
+  outline: none;
+  border-color: var(--Primary-Color-GOB-MX);
+}
+
+/* Hacer que el input de municipio se vea igual que el select */
+.dropdown-filtros-ubicacion input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-family: 'Noto Sans', sans-serif;
+  background: #fff;
+  font-size: 14px;
+  color: #000;
+  height: 36px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: var(--dropdown-arrow-svg);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 30px;
+  transition: border-color 0.3s ease;
+}
+
+.dropdown-filtros-ubicacion input[type="text"]:focus {
+  outline: none;
+  border-color: var(--Primary-Color-GOB-MX);
+}
+
+.dropdown-filtros-ubicacion input[type="text"]:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.dropdown-filtros-ubicacion input[type="text"]:not(:disabled):not(:focus) {
+  cursor: pointer;
+}
+
+.dropdown-filtros-ubicacion input[type="text"]:focus {
+  cursor: text;
+}
+
+.estado-container {
+  position: relative;
+  z-index: 1004;
+}
+
+#estado-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1005;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 100%;
+}
+
+.municipio-container {
+  position: relative;
+  z-index: 1002;
+}
+
+#municipio-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1003;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 100%;
 }
 
 .dropdown-filtros-ubicacion label {
@@ -340,5 +450,196 @@ geocoder-integrado .map-control-button {
 }
 
 .grupo-estado {
-  margin-bottom: 20px; 
+  margin-bottom: 1.5rem; 
+}
+
+.grupo-municipio {
+  margin-bottom: 1.5rem;
+}
+
+/* Contenedor de filtros - permitir que los dropdowns se salgan */
+.filtros-wrapper {
+  overflow: visible;
+  z-index: 1000;
+}
+
+/* =======================
+  POPUPS ELEGANTES
+  ======================= */
+
+/* Contenedor principal del popup */
+.maplibregl-popup {
+  z-index: 1050;
+}
+
+/* Contenido del popup */
+.maplibregl-popup-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border-radius: 12px !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.8) !important;
+  border: none !important;
+  padding: 16px 20px !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #2d3748 !important;
+  min-width: 200px !important;
+  backdrop-filter: blur(10px) !important;
+  animation: popupFadeIn 0.2s ease-out !important;
+}
+
+/* Variantes de color para diferentes tipos de popup */
+.maplibregl-popup-content.popup-info {
+  background: linear-gradient(135deg, #ebf8ff 0%, #f7fafc 100%) !important;
+  border-left: 4px solid #3182ce !important;
+}
+
+.maplibregl-popup-content.popup-warning {
+  background: linear-gradient(135deg, #fffaf0 0%, #f7fafc 100%) !important;
+  border-left: 4px solid #ed8936 !important;
+}
+
+.maplibregl-popup-content.popup-danger {
+  background: linear-gradient(135deg, #fed7d7 0%, #f7fafc 100%) !important;
+  border-left: 4px solid #e53e3e !important;
+}
+
+/* Efectos de glassmorphism más pronunciados */
+.maplibregl-popup-content.glass-effect {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Iconos pequeños para el popup */
+.maplibregl-popup-content .popup-icon {
+  display: inline-block !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 6px !important;
+  vertical-align: middle !important;
+  opacity: 0.7 !important;
+}
+
+/* Mejoras en la tipografía */
+.maplibregl-popup-content .popup-label {
+  font-size: 12px !important;
+  color: #718096 !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin-bottom: 2px !important;
+}
+
+.maplibregl-popup-content .popup-value {
+  font-size: 16px !important;
+  color: #2d3748 !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+}
+
+/* Animación de entrada */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.92);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Animación de salida */
+@keyframes popupFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    filter: blur(2px);
+  }
+}
+
+/* Títulos en el popup */
+.maplibregl-popup-content strong {
+  color: #1a202c !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  display: block !important;
+  margin-bottom: 6px !important;
+  letter-spacing: -0.025em !important;
+}
+
+/* Texto del popup */
+.maplibregl-popup-content br + * {
+  color: #4a5568 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* Punta del popup (flecha) */
+.maplibregl-popup-tip {
+  border-top-color: #ffffff !important;
+  border-width: 8px !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+}
+
+/* Botón de cerrar (si se usa) */
+.maplibregl-popup-close-button {
+  color: #718096 !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  position: absolute !important;
+  top: 8px !important;
+  right: 12px !important;
+  padding: 4px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  background-color: #edf2f7 !important;
+  color: #2d3748 !important;
+  transform: scale(1.1) !important;
+}
+
+/* Estilo especial para datos numéricos */
+.maplibregl-popup-content .popup-metric {
+  color: #3182ce !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+/* Estructura del popup */
+.maplibregl-popup-content .popup-header {
+  margin-bottom: 8px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.maplibregl-popup-content .popup-body {
+  color: #4a5568 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+
+/* Hover effect sutil */
+.maplibregl-popup-content:hover {
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    0 6px 20px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.9) !important;
+  transform: translateY(-1px) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
