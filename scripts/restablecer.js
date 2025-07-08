@@ -73,11 +73,16 @@ resetMapView(button) {
   if (srcCalles) srcCalles.setData({ type:'FeatureCollection', features: [] });
 
   /* 5. Reiniciar dropdowns de filtros ------------------------------------ */
-  const filtro    = document.querySelector('dropdown-filtros-ubicacion');
-  const selEstado = filtro?.querySelector('#select-estado');
-  const selMpio   = filtro?.querySelector('#select-municipio');
-  if (selEstado) { selEstado.value=''; selEstado.dispatchEvent(new Event('change')); }
-  if (selMpio)   { selMpio.value=''; selMpio.disabled=true; }
+  const filtro = document.querySelector('dropdown-filtros-ubicacion');
+  if (filtro && typeof filtro.resetFilters === 'function') {
+    filtro.resetFilters();
+  } else {
+    // Fallback para compatibilidad
+    const selEstado = filtro?.querySelector('#select-estado');
+    const selMpio = filtro?.querySelector('#select-municipio');
+    if (selEstado) { selEstado.value = ''; selEstado.dispatchEvent(new Event('change')); }
+    if (selMpio) { selMpio.value = ''; selMpio.disabled = true; }
+  }
 
   /* 6. Volver a vista nacional ------------------------------------------ */
   window.map.flyTo({ center:[-102.5528,23.6345], zoom:4.2, speed:1.2 });

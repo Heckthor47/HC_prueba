@@ -815,6 +815,95 @@ class DropdownFiltrosUbicacion extends HTMLElement {
       municipio: this.municipioSelect.value
     };
   }
+
+  // ==========================
+  // MÉTODOS DE RESETEO Y LIMPIEZA
+  // ==========================
+  
+  /**
+   * Resetea ambos filtros a su estado inicial
+   */
+  resetFilters() {
+    this.clearEstadoFilter();
+    this.clearMunicipioFilter();
+  }
+
+  /**
+   * Limpia el filtro de estado y resetea municipios
+   */
+  clearEstadoFilter() {
+    // Limpiar input visual
+    this.searchEstado.value = '';
+    this.searchEstado.placeholder = 'Selecciona un estado';
+    
+    // Limpiar select oculto
+    this.estadoSelect.value = '';
+    
+    // Cerrar dropdown si está abierto
+    this._closeEstadoDropdown();
+    
+    // Limpiar y deshabilitar municipios
+    this.clearMunicipioFilter();
+    this.municipioSelect.disabled = true;
+    this.searchMunicipio.disabled = true;
+    this.searchMunicipio.placeholder = '-- Municipio --';
+    
+    // Emitir evento de cambio
+    this.estadoSelect.dispatchEvent(new Event('change'));
+  }
+
+  /**
+   * Limpia solo el filtro de municipio
+   */
+  clearMunicipioFilter() {
+    // Limpiar input visual
+    this.searchMunicipio.value = '';
+    this.searchMunicipio.placeholder = this.municipioSelect.disabled ? '-- Municipio --' : 'Selecciona un municipio';
+    
+    // Limpiar select oculto
+    this.municipioSelect.value = '';
+    
+    // Cerrar dropdown si está abierto
+    this._closeDropdown();
+    
+    // Emitir evento de cambio
+    this.municipioSelect.dispatchEvent(new Event('change'));
+  }
+
+  /**
+   * Actualiza el filtro de estado desde el geocoder
+   */
+  updateFromGeocoder(estadoValue, municipioValue = null) {
+    // Buscar el estado en la lista
+    const estado = this.estados.find(e => e.value === estadoValue);
+    if (estado) {
+      this.searchEstado.value = estado.label;
+      this.estadoSelect.value = estado.value;
+      this.estadoSelect.dispatchEvent(new Event('change'));
+      
+      // Si se proporciona municipio, actualizarlo después de que se carguen
+      if (municipioValue) {
+        setTimeout(() => {
+          this.updateMunicipioFromGeocoder(municipioValue);
+        }, 100);
+      }
+    }
+  }
+
+  /**
+   * Actualiza el filtro de municipio desde el geocoder
+   */
+  updateMunicipioFromGeocoder(municipioValue) {
+    const municipioOption = Array.from(this.municipioSelect.options).find(opt => 
+      opt.value === municipioValue
+    );
+    
+    if (municipioOption) {
+      this.searchMunicipio.value = municipioOption.textContent;
+      this.municipioSelect.value = municipioValue;
+      this.municipioSelect.dispatchEvent(new Event('change'));
+    }
+  }
 }
 customElements.define('dropdown-filtros-ubicacion', DropdownFiltrosUbicacion);
 

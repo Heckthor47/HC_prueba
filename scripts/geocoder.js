@@ -138,6 +138,12 @@ class GeocoderIntegrado extends HTMLElement {
     geocoder.on('result', (e) => {
       const lngLat = e.result.center;
 
+      // Limpiar filtros inmediatamente cuando se busca algo
+      const filtroComponent = document.querySelector('dropdown-filtros-ubicacion');
+      if (filtroComponent && typeof filtroComponent.resetFilters === 'function') {
+        filtroComponent.resetFilters();
+      }
+
       // Remover marcador anterior si existe
       if (window.marker) {
         window.marker.remove();
@@ -183,52 +189,24 @@ class GeocoderIntegrado extends HTMLElement {
       const cve_ent = municipio.properties.CVEGEO.slice(0, 2); // Código de estado
       const cvegeo = municipio.properties.CVEGEO; // Código de municipio
 
-      // Actualizar dropdowns dentro del web component
-      const filtro = document.querySelector('dropdown-filtros-ubicacion');
-      const selectEstado = filtro?.querySelector('#select-estado');
-      const selectMunicipio = filtro?.querySelector('#select-municipio');
-
-      if (!selectEstado || !selectMunicipio) {
-        console.error("No se encontraron los selectores de estado o municipio.");
+      // Limpiar filtros primero
+      const filtroDropdown = document.querySelector('dropdown-filtros-ubicacion');
+      if (!filtroDropdown) {
+        console.error("No se encontró el componente de filtros de ubicación.");
         alert("Hubo un problema al cargar los filtros de ubicación. Por favor, recarga la página.");
         return;
       }
 
-      // Encontrar y seleccionar estado (por value: "callesXX")
-      const estadoOption = Array.from(selectEstado.options).find(opt =>
-        opt.value.endsWith(cve_ent)
-      );
+      // Limpiar filtros existentes antes de aplicar nuevos
+      filtroDropdown.resetFilters();
 
-      if (!estadoOption) {
-        console.warn("Estado no encontrado en dropdown:", cve_ent);
-        return;
-      }
-
-      // Cambiar estado y emitir evento personalizado
-      selectEstado.value = estadoOption.value;
-      filtro.dispatchEvent(new CustomEvent('estado-change', {
-        detail: { value: selectEstado.value },
-        bubbles: true
-      }));
-
-      // Esperar a que se carguen municipios
+      // Buscar el estado correspondiente en el diccionario
+      const estadoValue = `calles${cve_ent}`;
+      
+      // Actualizar filtros usando los nuevos métodos
       setTimeout(() => {
-        const municipioOption = Array.from(selectMunicipio.options).find(opt =>
-          opt.value === cvegeo
-        );
-
-        if (!municipioOption) {
-          console.warn("Municipio no encontrado en dropdown:", cvegeo);
-          alert(`No se encontró el municipio con código "${cvegeo}" en el dropdown.`);
-          return;
-        }
-
-        selectMunicipio.value = municipioOption.value;
-        filtro.dispatchEvent(new CustomEvent('municipio-change', {
-          detail: { value: selectMunicipio.value },
-          bubbles: true
-        }));
-      }, 0);
+        filtroDropdown.updateFromGeocoder(estadoValue, cvegeo);
+      }, 200);
     });
 
     container.appendChild(geocoder.onAdd(window.map));
